@@ -1,0 +1,1 @@
+g++ -o conf apt-private/*.cc conf.cpp -I./ -lapt-pkg
