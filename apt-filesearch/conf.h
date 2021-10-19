@@ -1,32 +1,14 @@
+#include <apt-pkg/acquire-item.h>
 #include <apt-pkg/acquire.h>
-#include <apt-pkg/macros.h>
+#include <apt-pkg/configuration.h>
+#include <apt-pkg/error.h>
+#include <apt-pkg/fileutl.h>
+#include <apt-pkg/sourcelist.h>
+#include <apt-pkg/strutl.h>
+#include <apt-pkg/update.h>
 
-#include <iostream>
 #include <string>
+#include "apti18n.h"
 
-class APT_PUBLIC AcqTextStatus : public pkgAcquireStatus2
-{
-   std::ostream &out;
-   unsigned int &ScreenWidth;
-   size_t LastLineLength;
-   unsigned long ID;
-   unsigned long Quiet;
-
-   APT_HIDDEN void clearLastLine();
-   APT_HIDDEN void AssignItemID(pkgAcquire::ItemDesc &Itm);
-
-   public:
-
-   virtual bool ReleaseInfoChanges(metaIndex const * const LastRelease, metaIndex const * const CurrentRelease, std::vector<ReleaseInfoChange> &&Changes) APT_OVERRIDE;
-   virtual bool MediaChange(std::string Media,std::string Drive) APT_OVERRIDE;
-   virtual void IMSHit(pkgAcquire::ItemDesc &Itm) APT_OVERRIDE;
-   virtual void Fetch(pkgAcquire::ItemDesc &Itm) APT_OVERRIDE;
-   virtual void Done(pkgAcquire::ItemDesc &Itm) APT_OVERRIDE;
-   virtual void Fail(pkgAcquire::ItemDesc &Itm) APT_OVERRIDE;
-   virtual void Start() APT_OVERRIDE;
-   virtual void Stop() APT_OVERRIDE;
-
-   bool Pulse(pkgAcquire *Owner) APT_OVERRIDE;
-
-   AcqTextStatus(std::ostream &out, unsigned int &ScreenWidth,unsigned int const Quiet);
-};
+bool AcquireUpdateL(pkgAcquire &Fetcher, int const PulseInterval = 0,
+		   bool const RunUpdateScripts = true, bool const ListCleanup = true);
