@@ -15,6 +15,9 @@
 #include "apt-private/acqprogress.h"
 #include "apt-private/private-download.h"
 #include "apt-private/private-output.h"
+#include "apt-private/private-update.h"
+#include "apt-private/private-main.h"
+#include "apt-private/private-cachefile.h"
 
 #include <ostream>
 #include <string>
@@ -25,7 +28,9 @@ using namespace std;
 int main() {
    pkgInitConfig(*_config);
    pkgInitSystem(*_config, _system);
-   pkgCacheFile Cache;
+      InitSignals();
+   InitOutput();
+   CacheFile Cache;
 
    // Get the source list
    if (Cache.BuildSourceList() == false) {
@@ -33,7 +38,7 @@ int main() {
    }
    pkgSourceList *List = Cache.GetSourceList();
    _config->CndSet("Acquire::ForceHash", "md5sum");
-
+   cout << List->begin() << endl;
    // Populate it with the source selection and get all Indexes
    // (GetAll=true)
    aptAcquireWithTextStatus Fetcher;
@@ -49,11 +54,14 @@ int main() {
          FileName = FileName.substr(0, FileName.size() - compExt.size() - 1);
          regex r("Contents");
          if (regex_search(I->URI, r) == true) {
-            cout << "\"" << I->URI << "\" \"" << FileName << "\"" << endl;
+//            cout << "\"" << I->URI << "\" \"" << FileName << "\"" << endl;
          }
       }
    }
 
+   if (_config->FindB("APT::Get::Download",true) == true) {
+      AcqTextStatus Stat(std::cout, ScreenWidth,_config->FindI("quiet",0));
+      ListUpdate(Stat, *List);
+   }
    return 0;
 }
-
