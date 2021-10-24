@@ -8,21 +8,25 @@ struct entry
     string pkgname;
 };
 // 作用：在文件中逐行查找在数组的第一个元素中包含所需内容的项，并返回结果
-vector<entry> ParseContents(const char *filename, char **targets)
+
+vector<entry> ParseContents(string filename, char** targets)
 {
     fstream file;
     vector<entry> res;
     file.open(filename, ios::in);
     if (!file)
     {
-        cout << "文件打开失败。\n";
+        cout << "文件打开失败:"<<filename<<"\n";
         return res;
     }
-    else
+    int tarnum =0;
+    char *p=targets[0];
+    while (p)
     {
-        cout << "正在解析文件...\n";
+        tarnum++;
+        p=targets[tarnum];
     }
-    int tarnum = sizeof(targets) / sizeof(char *);
+    
     if (!tarnum)
     {
         return res;
@@ -47,7 +51,6 @@ vector<entry> ParseContents(const char *filename, char **targets)
         {
             if (!filename.compare(targets[i]))
             {
-                ///
                 index = line.find_last_of("\t");
                 int index2 = line.find_last_of(" ");
                 if (index == line.npos)
@@ -59,9 +62,7 @@ vector<entry> ParseContents(const char *filename, char **targets)
                     index2 = line.length();
                 }
                 index = min(index,index2)+1;
-
                 string opt_right = line.substr(index, line.length() - index);
-                ///
                 lastindex = opt_right.find_last_of("/");
                 if (lastindex == opt_right.npos)
                     lastindex = -1;
@@ -73,30 +74,27 @@ vector<entry> ParseContents(const char *filename, char **targets)
             }
         }
     }
-    //这里可能要对res去重
-    // for(int i=0;i<res.size();i++){
-    //     for(int j=i+1;j<res.size();j++){
-    //         if (res.at(i).pkgname == res.at(j).pkgname)
-    //         {
-    //             res.erase(res.begin()+j);
-    //         }
-    //     }
-    // }
     file.close();
     return res;
 }
 int main(int argc, char **argv)
 {
-    char *targets[argc - 1];
-    for (int i = 1; i < argc; i++)
+
+    char* targets[argc - 1];
+    for (int i = 2; i < argc; i++)
     {
-        targets[i - 1] = argv[i];
+        targets[i - 2] = argv[i];
     }
-    vector<entry> a = ParseContents("../Contents-amd64", targets);
+    targets[argc-1]=nullptr;
+    if(argc<3){
+        cout<<"参数过少";
+    }
+    
+    vector<entry> a = ParseContents(argv[1], targets);
     for (entry i : a)
     {
         cout << i.pkgname << ": " << i.path << endl;
     }
-    return a.size() != 0;
-    // return 0;
+    
+    return 0;
 }
