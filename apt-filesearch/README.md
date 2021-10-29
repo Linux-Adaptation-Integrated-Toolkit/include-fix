@@ -1,6 +1,6 @@
 ## current version
 
-g++ -o afs afs.cpp -lstdc++fs
+g++ -o afs afs.cpp -lstdc++fs -llz4
 
 our source code should be compiled by gcc that support C++ 17.
 
