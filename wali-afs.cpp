@@ -1,4 +1,3 @@
-#include <string>
 #include <cstring>
 #if __GNUC__ <= 6
     #error your compiler cannot support C++17 standard. we need at least GCC 7
@@ -20,7 +19,7 @@
 #include <lz4frame.h>
 #define LZ4_IN_CHUNK_SIZE  (16*1024)
 
-#include "afs.h"
+#include "wali-afs.h"
 
 using namespace std;
 #if (__GNUC__ > 6) && (__GNUC__ < 11)
@@ -29,16 +28,17 @@ using namespace std;
     namespace fs = std::filesystem;
 #endif
 
-int main() {
-    //string cmd = "pkexec apt update -c " + string(getenv("HOME")) + "/.config/wali/wali.conf 2>/dev/null";
-    //execmd(cmd);
-    //const string destdir = string(getenv("HOME")) + "/.local/share/wali/filesdb/";
-    //cpcontent(destdir);
-    //decompress_contents("/home/uos/.local/share/wali/filesdbcommunity-packages.deepin.com_deepin_dists_apricot_contrib_Contents-amd64.lz4");
-    return 0;
+AptFileSearch::AptFileSearch()
+{
 }
 
-bool execmd(const string cmd, int buffnum) {
+AptFileSearch::~AptFileSearch()
+{
+}
+
+
+
+bool AptFileSearch::execmd(const string cmd, int buffnum) {
     int closeResult;
     FILE* cmdout;
     char read_buffer[buffnum];
@@ -73,7 +73,7 @@ bool execmd(const string cmd, int buffnum) {
     return true;
 }
 
-bool cpcontent(const std::string dpath, const std::string rpath) {
+bool AptFileSearch::cpcontent(const std::string dpath, const std::string rpath) {
     fs::path strd(dpath);
     fs::path strr(rpath);
     regex contentsr("_Contents-");
@@ -120,11 +120,7 @@ bool cpcontent(const std::string dpath, const std::string rpath) {
     return true;
 }
 
-/* need input and output to supply absolute path
- * input is an file path, output is an directory path
- * if output is not exist, we will build it(but its parrent path must be exist)
-*/
-bool decompress_contents(string input, string output) {
+bool AptFileSearch::decompress_contents(string input, string output) {
     fs::path stri(input);
     fs::path stro(output);
     //get filename, file extension name and filename without extension
@@ -154,8 +150,7 @@ bool decompress_contents(string input, string output) {
     delete[] output_file_char;
     return true;
 }
-
-static void safe_fwrite(void* buf, size_t eltSize, size_t nbElt, FILE* f)
+void AptFileSearch::safe_fwrite(void* buf, size_t eltSize, size_t nbElt, FILE* f)
 {
     size_t const writtenSize = fwrite(buf, eltSize, nbElt, f);
     size_t const expectedSize = eltSize * nbElt;
@@ -169,7 +164,7 @@ static void safe_fwrite(void* buf, size_t eltSize, size_t nbElt, FILE* f)
     }
 }
 
-static int decompress_file_internal(FILE* f_in, FILE* f_out, LZ4F_dctx* dctx, void* src, size_t srcCapacity, size_t filled, size_t alreadyConsumed, void* dst, size_t dstCapacity) {
+int AptFileSearch::decompress_file_internal(FILE* f_in, FILE* f_out, LZ4F_dctx* dctx, void* src, size_t srcCapacity, size_t filled, size_t alreadyConsumed, void* dst, size_t dstCapacity) {
     int firstChunk = 1;
     size_t ret = 1;
 
@@ -233,7 +228,7 @@ static int decompress_file_internal(FILE* f_in, FILE* f_out, LZ4F_dctx* dctx, vo
     return 0;
 }
 
-static size_t get_block_size(const LZ4F_frameInfo_t* info) {
+size_t AptFileSearch::get_block_size(const LZ4F_frameInfo_t* info) {
     switch (info->blockSizeID) {
         case LZ4F_default:
         case LZ4F_max64KB:  return 1 << 16;
@@ -246,7 +241,7 @@ static size_t get_block_size(const LZ4F_frameInfo_t* info) {
     }
 }
 
-static int decompress_file_allocDst(FILE* f_in, FILE* f_out, LZ4F_dctx* dctx, void* src, size_t srcCapacity) {
+int AptFileSearch::decompress_file_allocDst(FILE* f_in, FILE* f_out, LZ4F_dctx* dctx, void* src, size_t srcCapacity) {
     assert(f_in != NULL); assert(f_out != NULL);
     assert(dctx != NULL);
     assert(src != NULL);
@@ -283,7 +278,7 @@ static int decompress_file_allocDst(FILE* f_in, FILE* f_out, LZ4F_dctx* dctx, vo
     free(dst);
     return decompressionResult;
 }
-bool decompress_file(FILE* f_in, FILE* f_out) {
+bool AptFileSearch::decompress_file(FILE* f_in, FILE* f_out) {
     assert(f_in != NULL); 
     assert(f_out != NULL);
 
@@ -310,4 +305,60 @@ bool decompress_file(FILE* f_in, FILE* f_out) {
         return false;
     }
     return true;
+}
+
+vector<AptFileSearch::entry> AptFileSearch::parse_contents(const string &filename, vector<string> targets)
+{
+    fstream file;
+    vector<entry> res;
+    file.open(filename, ios::in);
+    if (!file)
+    {
+        cout << "文件打开失败:"<<filename<<"\n";
+        return res;
+    }
+    string line;
+    while (getline(file, line))
+    {
+        uint index;
+        index = line.find('\t');
+        if (int(index) == string::npos)
+        {
+            index = line.find(' ');
+        }
+        string opt_left = line.substr(0, index);
+        uint lastindex = opt_left.find_last_of('/');
+        if (int(lastindex) == string::npos)
+            lastindex = -1;
+        string file_name = opt_left.substr(lastindex + 1, opt_left.length() - lastindex);
+        vector<string>::iterator it;
+        for (it = targets.begin();it!=targets.end(); it++)
+        {
+            if (file_name==*it)
+            {
+                index = line.find_last_of('\t');
+                uint index2 = line.find_last_of(' ');
+                if (int(index) == string::npos)
+                {
+                    index = line.length();
+                }
+                if(int(index2) == string::npos)
+                {
+                    index2 = line.length();
+                }
+                index = min(index,index2)+1;
+                string opt_right = line.substr(index, line.length() - index);
+                lastindex = opt_right.find_last_of(' ');
+                if (int(lastindex) == string::npos)
+                    lastindex = -1;
+                string pkgname = opt_right.substr(lastindex + 1, opt_right.length() - lastindex);
+                entry a;
+                a.path = opt_left;
+                a.pkgname = pkgname;
+                res.push_back(a);
+            }
+        }
+    }
+    file.close();
+    return res;
 }

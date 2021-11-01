@@ -1,6 +1,3 @@
-#include "config.h"
-#include "compat.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -14,7 +11,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "wali-dpkgs.h"
 
+extern "C"{
 #include <dpkg/dpkg.h>
 #include <dpkg/dpkg-db.h>
 #include <dpkg/pkg-array.h>
@@ -28,30 +27,9 @@
 #include <dpkg/options.h>
 #include <dpkg/db-ctrl.h>
 #include <dpkg/db-fsys.h>
-
-#include "main.h"
-
-static int searchoutput(struct fsys_namenode *namenode);
-static int searchfiles(const char *const *argv);
-
-int main(int argc, const char *const *argv) {
-  dpkg_set_report_piped_mode(_IOFBF);
-  dpkg_program_init("dpkg-query");
-
-  dpkg_db_set_dir("/var/lib/dpkg");
-
-  fsys_hash_init();
-  const char *const *argval = argv;
-  int v = searchfiles(argval);
-  printf("%d\n", v);
-  dpkg_program_done();
-
-  return 0;
 }
 
-static int
-searchoutput(struct fsys_namenode *namenode)
-{
+int searchoutput(struct fsys_namenode *namenode) {
   struct fsys_node_pkgs_iter *iter;
   struct pkginfo *pkg_owner;
   int found;
@@ -87,27 +65,40 @@ searchoutput(struct fsys_namenode *namenode)
   return found + (namenode->divert ? 1 : 0);
 }
 
-static int
-searchfiles(const char *const *argv)
-{
+int searchfiles(char** argv) {
+  /* dpkg init
+   * copy from dpkg command
+  */
+  dpkg_set_report_piped_mode(_IOFBF);
+  dpkg_program_init("libwali-dpkgs");
+  dpkg_db_set_dir("/var/lib/dpkg");
+  fsys_hash_init();
+
   struct fsys_namenode *namenode;
   struct fsys_hash_iter *iter;
   const char *thisarg;
   int found;
   int failures = 0;
-  struct varbuf path = VARBUF_INIT;
+
+  struct varbuf path;
+  path.used=0;
+  path.size=0;
+  path.buf=NULL;
   static struct varbuf vb;
 
-  if (!*argv)
-    badusage(("--search 需要至少一个文件名表达式作为参数"));
-//open database
+  if (!*argv) {
+    printf("need at least one parameter");
+    return 0;
+  }
+
+  //open database
   modstatdb_open(msdbrw_readonly);
   ensure_allinstfiles_available_quiet();
   ensure_diversions();
 
   while ((thisarg = *argv++) != NULL) {
     found= 0;
-//start varbuf
+    //start varbuf
     if (!strchr("*[?/",*thisarg)) {
       varbuf_reset(&vb);
       varbuf_add_char(&vb, '*');
@@ -124,7 +115,7 @@ searchfiles(const char *const *argv)
       varbuf_end_str(&path);
       varbuf_trunc(&path, path_trim_slash_slashdot(path.buf));
 
-      namenode = fsys_hash_find_node(path.buf, 0);
+      namenode = fsys_hash_find_node(path.buf, FHFF_NOCOPY);
       found += searchoutput(namenode);
     } else {
       //
@@ -136,17 +127,19 @@ searchfiles(const char *const *argv)
       fsys_hash_iter_free(iter);
     }
     if (!found) {
-      notice(("没有找到与 %s 相匹配的路径"), thisarg);
+      notice("cannot find path suitable for %s", thisarg);
       failures++;
-      m_output(stderr, ("标准错误"));
+      m_output(stderr, ("standard error"));
     } else {
-      m_output(stdout, ("标准输出"));
+      m_output(stdout, ("standard output"));
     }
   }
-//close database
+  //close database
   modstatdb_shutdown();
-//destroy varbuf
+  //destroy varbuf
   varbuf_destroy(&path);
+
+  dpkg_program_done();
 
   return failures;
 }

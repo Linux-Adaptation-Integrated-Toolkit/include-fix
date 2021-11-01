@@ -12,6 +12,10 @@ Here are three solutions:
 
 * If the required dependent libraries cannot be found in the above two methods, it can almost be considered that the libraries do not exist in., / usr / include and / usr / local / include. At this time, there is only one possibility: the required dependent libraries are either installed, but installed in some strange paths, or not installed locally, and there is no remote warehouse, which can only be solved by the developers themselves.
 
+### compile
+
+g++ -fPIC -shared wali-afs.cpp wali-dpkgs.cpp -g -ldpkg -llz4 -lstdc++fs -o libwali-search.so
+
 ## Chinese
 
 它的作用是在检测到c/cpp源码文件缺失头文件后，通过包管理系统去搜索恰当的解决方案。
