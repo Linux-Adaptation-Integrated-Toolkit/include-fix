@@ -1,0 +1,3 @@
+[submodule "libdpkg"]
+	path = libdpkg
+	url = https://github.com/Linux-Adaptation-Integrated-Toolkit/libdpkg.git
