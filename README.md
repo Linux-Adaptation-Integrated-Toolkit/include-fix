@@ -15,12 +15,7 @@ Here are three solutions:
 ### compile
 
 ```
-cd libdpkg
-./configure --enable-shared
-make -j4
-cp libdpkg.so.0.0 ../libdpkg.so
-cd ..
-g++ -fPIC -shared wali-afs.cpp wali-dpkgs.cpp -L. -ldpkg -llz4 -lstdc++fs -o libwali-search.so
+xmake
 ```
 
 ## Chinese
