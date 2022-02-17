@@ -15,7 +15,8 @@ Here are three solutions:
 ### compile
 
 ```
-xmake
+mkdir build && cd build && cmake ..
+make -j()
 ```
 
 ## Chinese
